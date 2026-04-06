@@ -4,7 +4,14 @@ spring:
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     streams:
-      application-id: event-engine
+      application-id: ${ENGINE_APPLICATION_ID:event-engine}
       properties:
         default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
         default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+
+server:
+  port: ${ENGINE_PORT:8089}
+
+engine:
+  pipeline-name: ${PIPELINE_NAME:}
+  admin-url: ${ADMIN_URL:http://localhost:8091}

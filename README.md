@@ -228,40 +228,108 @@ Swagger UI available at `/swagger-ui.html` on both services.
 ```bash
 git clone https://github.com/psandis/event-processing.git
 cd event-processing
-./start.sh docker           # starts Kafka, PostgreSQL, and all services
+docker compose up --build -d    # starts Kafka, PostgreSQL, ingest, admin
 ```
 
-### Submit a test event
+### 1. Create a pipeline
+
+Define how events should be transformed from source to destination.
+
+```bash
+curl -X POST http://localhost:8091/api/pipelines \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "orders-to-warehouse",
+    "description": "Transform order events for warehouse fulfillment",
+    "sourceTopic": "events.raw",
+    "destinationTopic": "warehouse.fulfillment",
+    "fieldMappings": [
+      { "sourceField": "orderId", "destinationField": "fulfillmentId" },
+      { "sourceField": "total", "destinationField": "amount", "conversion": "TO_DOUBLE" },
+      { "sourceField": "currency", "destinationField": "currency" },
+      { "sourceField": "customer.city", "destinationField": "shipping.city" },
+      { "sourceField": "customer.country", "destinationField": "shipping.countryCode", "conversion": "TO_UPPER" },
+      { "sourceField": "debug", "destinationField": "debug", "excluded": true }
+    ]
+  }'
+```
+
+### 2. Start an engine instance for the pipeline
+
+Each engine instance processes one pipeline. Start it with the pipeline name.
+
+```bash
+PIPELINE_NAME=orders-to-warehouse docker compose run -d event-engine
+```
+
+The engine fetches the pipeline definition from admin, builds a Kafka Streams topology, and starts consuming from the source topic.
+
+### 3. Submit an event
 
 ```bash
 curl -X POST http://localhost:8090/api/events \
   -H "Content-Type: application/json" \
   -d '{
     "type": "order.created",
-    "source": "test",
+    "source": "order-service",
     "payload": {
-      "orderId": 1,
-      "total": "49.99",
-      "currency": "EUR"
+      "orderId": 5001,
+      "total": "129.99",
+      "currency": "EUR",
+      "customer": { "city": "Helsinki", "country": "fi" },
+      "debug": true
     }
   }'
 ```
 
-### Create a pipeline
+### 4. Verify the transformed event
 
 ```bash
-curl -X POST http://localhost:8091/api/pipelines \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "orders-to-analytics",
-    "sourceTopic": "events.raw",
-    "destinationTopic": "analytics.orders",
-    "fieldMappings": [
-      { "sourceField": "orderId", "destinationField": "id" },
-      { "sourceField": "total", "destinationField": "amount", "conversion": "TO_DOUBLE" },
-      { "sourceField": "currency", "destinationField": "currency" }
-    ]
-  }'
+docker exec event-processing-kafka-1 kafka-console-consumer \
+  --bootstrap-server localhost:29092 \
+  --topic warehouse.fulfillment \
+  --from-beginning --timeout-ms 5000
+```
+
+The transformed output:
+
+```json
+{
+  "id": "evt_...",
+  "type": "order.created",
+  "source": "order-service",
+  "status": "PROCESSED",
+  "payload": {
+    "fulfillmentId": 5001,
+    "amount": 129.99,
+    "currency": "EUR",
+    "shipping": {
+      "city": "Helsinki",
+      "countryCode": "FI"
+    }
+  }
+}
+```
+
+The `debug` field is excluded. `total` (string) became `amount` (double). `customer.country` ("fi") became `shipping.countryCode` ("FI"). Nested destination structure created automatically.
+
+### Pipeline lifecycle
+
+```bash
+# Pause a pipeline (stops processing, engine keeps running)
+curl -X POST http://localhost:8091/api/pipelines/orders-to-warehouse/pause
+
+# Resume
+curl -X POST http://localhost:8091/api/pipelines/orders-to-warehouse/resume
+
+# Update pipeline (stop engine, update, start new engine)
+docker stop <engine-container-id>
+curl -X PUT http://localhost:8091/api/pipelines/orders-to-warehouse ...
+PIPELINE_NAME=orders-to-warehouse docker compose run -d event-engine
+
+# Delete pipeline
+docker stop <engine-container-id>
+curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ```
 
 ### Run tests

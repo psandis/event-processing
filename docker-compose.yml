@@ -54,6 +54,8 @@ services:
       kafka:
         condition: service_healthy
 
+  # Engine instances are started per pipeline. Example:
+  # docker compose run -d -e PIPELINE_NAME=my-pipeline event-engine
   event-engine:
     build:
       context: .
@@ -61,9 +63,16 @@ services:
         MODULE: event-engine
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      ADMIN_URL: http://event-admin:8091
+      PIPELINE_NAME: ${PIPELINE_NAME:-}
+      ENGINE_APPLICATION_ID: event-engine-${PIPELINE_NAME:-default}
     depends_on:
       kafka:
         condition: service_healthy
+      event-admin:
+        condition: service_started
+    profiles:
+      - engine
 
   event-admin:
     build:
