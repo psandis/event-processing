@@ -91,8 +91,11 @@ public class MappingExecutor {
         Iterator<Map.Entry<String, JsonNode>> fields = source.fields();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> field = fields.next();
-            String key = (prefix != null && !prefix.isEmpty()) ? prefix + "." + field.getKey() : field.getKey();
-            target.set(field.getKey(), field.getValue());
+            if (prefix != null && !prefix.isEmpty()) {
+                setField(target, prefix + "." + field.getKey(), field.getValue());
+            } else {
+                target.set(field.getKey(), field.getValue());
+            }
         }
     }
 

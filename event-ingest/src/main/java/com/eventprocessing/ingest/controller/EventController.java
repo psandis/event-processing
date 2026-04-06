@@ -3,6 +3,7 @@ package com.eventprocessing.ingest.controller;
 import com.eventprocessing.common.model.Event;
 import com.eventprocessing.common.model.EventRequest;
 import com.eventprocessing.ingest.service.EventProducer;
+import com.eventprocessing.ingest.service.IngestRequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,9 +24,11 @@ import java.util.Map;
 public class EventController {
 
     private final EventProducer eventProducer;
+    private final IngestRequestValidator requestValidator;
 
-    public EventController(EventProducer eventProducer) {
+    public EventController(EventProducer eventProducer, IngestRequestValidator requestValidator) {
         this.eventProducer = eventProducer;
+        this.requestValidator = requestValidator;
     }
 
     @PostMapping("/events")
@@ -37,7 +40,8 @@ public class EventController {
 
     @PostMapping("/events/batch")
     @Operation(summary = "Submit multiple events")
-    public ResponseEntity<List<Event>> submitBatch(@Valid @RequestBody List<EventRequest> requests) {
+    public ResponseEntity<List<Event>> submitBatch(@Valid @RequestBody List<@Valid EventRequest> requests) {
+        requestValidator.validateBatchSize(requests.size());
         List<Event> events = requests.stream()
                 .map(eventProducer::submit)
                 .toList();

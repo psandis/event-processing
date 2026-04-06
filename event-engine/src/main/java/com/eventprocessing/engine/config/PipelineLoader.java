@@ -15,10 +15,14 @@ public class PipelineLoader {
     private final EngineProperties properties;
 
     public PipelineLoader(EngineProperties properties) {
-        this.properties = properties;
-        this.restClient = RestClient.builder()
+        this(properties, RestClient.builder()
                 .baseUrl(properties.adminUrl())
-                .build();
+                .build());
+    }
+
+    PipelineLoader(EngineProperties properties, RestClient restClient) {
+        this.properties = properties;
+        this.restClient = restClient;
     }
 
     public PipelineDefinition load() {

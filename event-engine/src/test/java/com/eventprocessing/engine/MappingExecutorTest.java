@@ -197,6 +197,40 @@ class MappingExecutorTest {
         assertThat(result.has("other")).isFalse();
     }
 
+    @Test
+    void flattenObjectIntoParent() throws Exception {
+        JsonNode input = mapper.readTree("""
+                { "address": { "city": "Helsinki", "zip": "00100" } }
+                """);
+
+        FieldMapping flatten = mapping("address", "");
+        flatten.setConversion(ConversionType.FLATTEN);
+
+        PipelineDefinition pipeline = pipeline(List.of(flatten));
+
+        JsonNode result = executor.execute(input, pipeline);
+
+        assertThat(result.get("city").textValue()).isEqualTo("Helsinki");
+        assertThat(result.get("zip").textValue()).isEqualTo("00100");
+    }
+
+    @Test
+    void flattenObjectIntoNestedDestination() throws Exception {
+        JsonNode input = mapper.readTree("""
+                { "address": { "city": "Helsinki", "country": "FI" } }
+                """);
+
+        FieldMapping flatten = mapping("address", "shipping");
+        flatten.setConversion(ConversionType.FLATTEN);
+
+        PipelineDefinition pipeline = pipeline(List.of(flatten));
+
+        JsonNode result = executor.execute(input, pipeline);
+
+        assertThat(result.get("shipping").get("city").textValue()).isEqualTo("Helsinki");
+        assertThat(result.get("shipping").get("country").textValue()).isEqualTo("FI");
+    }
+
     private FieldMapping mapping(String source, String destination) {
         return new FieldMapping(source, destination);
     }

@@ -1,5 +1,6 @@
 package com.eventprocessing.admin.service;
 
+import com.eventprocessing.common.mapping.ErrorHandling;
 import com.eventprocessing.common.mapping.FieldMapping;
 import com.eventprocessing.common.mapping.PipelineDefinition;
 import com.eventprocessing.admin.repository.PipelineEntity;
@@ -32,14 +33,14 @@ public class PipelineService {
 
     public PipelineDefinition getPipeline(String name) {
         PipelineEntity entity = pipelineRepository.findByName(name)
-                .orElseThrow(() -> new IllegalArgumentException("Pipeline not found: " + name));
+                .orElseThrow(() -> new PipelineNotFoundException(name));
         return toDefinition(entity);
     }
 
     @Transactional
     public PipelineDefinition createPipeline(PipelineDefinition definition) {
         if (pipelineRepository.existsByName(definition.getName())) {
-            throw new IllegalArgumentException("Pipeline already exists: " + definition.getName());
+            throw new PipelineAlreadyExistsException(definition.getName());
         }
 
         PipelineEntity entity = toEntity(definition);
@@ -50,7 +51,7 @@ public class PipelineService {
     @Transactional
     public PipelineDefinition updatePipeline(String name, PipelineDefinition definition) {
         PipelineEntity entity = pipelineRepository.findByName(name)
-                .orElseThrow(() -> new IllegalArgumentException("Pipeline not found: " + name));
+                .orElseThrow(() -> new PipelineNotFoundException(name));
 
         entity.setDescription(definition.getDescription());
         entity.setSourceTopic(definition.getSourceTopic());
@@ -68,7 +69,7 @@ public class PipelineService {
     @Transactional
     public void deletePipeline(String name) {
         if (!pipelineRepository.existsByName(name)) {
-            throw new IllegalArgumentException("Pipeline not found: " + name);
+            throw new PipelineNotFoundException(name);
         }
         pipelineRepository.deleteByName(name);
     }
@@ -76,7 +77,7 @@ public class PipelineService {
     @Transactional
     public PipelineDefinition togglePipeline(String name, boolean enabled) {
         PipelineEntity entity = pipelineRepository.findByName(name)
-                .orElseThrow(() -> new IllegalArgumentException("Pipeline not found: " + name));
+                .orElseThrow(() -> new PipelineNotFoundException(name));
         entity.setEnabled(enabled);
         entity = pipelineRepository.save(entity);
         return toDefinition(entity);
@@ -90,6 +91,9 @@ public class PipelineService {
         def.setDestinationTopic(entity.getDestinationTopic());
         def.setEnabled(entity.isEnabled());
         def.setFieldMappings(deserializeFieldMappings(entity.getFieldMappings()));
+        if (entity.getErrorHandling() != null) {
+            def.setErrorHandling(deserializeErrorHandling(entity.getErrorHandling()));
+        }
         return def;
     }
 
@@ -111,7 +115,7 @@ public class PipelineService {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to serialize JSON", e);
+            throw new IllegalStateException("Failed to serialize JSON", e);
         }
     }
 
@@ -119,7 +123,15 @@ public class PipelineService {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Failed to deserialize field mappings", e);
+            throw new IllegalStateException("Failed to deserialize field mappings", e);
+        }
+    }
+
+    private ErrorHandling deserializeErrorHandling(String json) {
+        try {
+            return objectMapper.readValue(json, ErrorHandling.class);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to deserialize error handling", e);
         }
     }
 }

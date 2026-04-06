@@ -1,36 +1,40 @@
-package com.eventprocessing.engine;
+package com.eventprocessing.engine.config;
 
 import com.eventprocessing.common.mapping.FieldMapping;
 import com.eventprocessing.common.mapping.PipelineDefinition;
-import com.eventprocessing.engine.config.EngineProperties;
-import com.eventprocessing.engine.config.PipelineLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
-import java.io.IOException;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class PipelineLoaderTest {
 
-    private MockWebServer mockServer;
+    private MockRestServiceServer mockServer;
+    private RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    void setUp() throws IOException {
-        mockServer = new MockWebServer();
-        mockServer.start();
+    void setUp() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://admin.test");
+        mockServer = MockRestServiceServer.bindTo(builder).build();
+        restClient = builder.build();
     }
 
     @AfterEach
-    void tearDown() throws IOException {
-        mockServer.shutdown();
+    void tearDown() {
+        mockServer.verify();
     }
 
     @Test
@@ -42,12 +46,12 @@ class PipelineLoaderTest {
         pipeline.setEnabled(true);
         pipeline.setFieldMappings(List.of(new FieldMapping("a", "b")));
 
-        mockServer.enqueue(new MockResponse()
-                .setBody(objectMapper.writeValueAsString(pipeline))
-                .addHeader("Content-Type", "application/json"));
+        mockServer.expect(requestTo("http://admin.test/api/pipelines/test-pipeline"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(pipeline), MediaType.APPLICATION_JSON));
 
-        EngineProperties props = new EngineProperties("test-pipeline", mockServer.url("/").toString());
-        PipelineLoader loader = new PipelineLoader(props);
+        EngineProperties props = new EngineProperties("test-pipeline", "http://admin.test");
+        PipelineLoader loader = new PipelineLoader(props, restClient);
 
         PipelineDefinition loaded = loader.load();
 
@@ -85,12 +89,12 @@ class PipelineLoaderTest {
         pipeline.setEnabled(false);
         pipeline.setFieldMappings(List.of());
 
-        mockServer.enqueue(new MockResponse()
-                .setBody(objectMapper.writeValueAsString(pipeline))
-                .addHeader("Content-Type", "application/json"));
+        mockServer.expect(requestTo("http://admin.test/api/pipelines/disabled-pipeline"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(objectMapper.writeValueAsString(pipeline), MediaType.APPLICATION_JSON));
 
-        EngineProperties props = new EngineProperties("disabled-pipeline", mockServer.url("/").toString());
-        PipelineLoader loader = new PipelineLoader(props);
+        EngineProperties props = new EngineProperties("disabled-pipeline", "http://admin.test");
+        PipelineLoader loader = new PipelineLoader(props, restClient);
 
         assertThatThrownBy(loader::load)
                 .isInstanceOf(IllegalStateException.class)

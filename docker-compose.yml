@@ -48,6 +48,7 @@ services:
         MODULE: event-ingest
     ports:
       - "8090:8090"
+      - "9090:9090"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package com.eventprocessing.ingest.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.eventprocessing.ingest.grpc";
+
+import "google/protobuf/struct.proto";
+
+service EventService {
+  rpc SubmitEvent (EventRequest) returns (EventResponse);
+  rpc SubmitBatch (BatchEventRequest) returns (BatchEventResponse);
+}
+
+message EventRequest {
+  string type = 1;
+  string source = 2;
+  // Generic JSON object payload. In grpcurl, send this as plain JSON:
+  // "payload":{"orderId":42,"name":"example"}
+  google.protobuf.Struct payload = 3;
+  // Optional JSON object for event metadata.
+  google.protobuf.Struct metadata = 4;
+}
+
+message EventResponse {
+  string id = 1;
+  string type = 2;
+  string source = 3;
+  string timestamp = 4;
+  string status = 5;
+}
+
+message BatchEventRequest {
+  repeated EventRequest events = 1;
+}
+
+message BatchEventResponse {
+  repeated EventResponse events = 1;
+}

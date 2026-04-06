@@ -11,7 +11,7 @@
 
 	<groupId>com.eventprocessing</groupId>
 	<artifactId>event-common</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>0.0.3-SNAPSHOT</version>
 	<name>Event Common</name>
 	<description>Shared event model, mapping definitions, type converters</description>
 
