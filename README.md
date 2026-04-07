@@ -195,7 +195,7 @@ event-processing/
 | event-ingest | Service | 8090, 9190 | Accepts events via REST and gRPC, validates, publishes to Kafka |
 | event-engine | Service | n/a | Consumes from source topics, applies field mappings, produces to destination topics. One instance per pipeline. |
 | event-admin | Service | 8091 | Pipeline CRUD, versioning, deployment status, dead letter inspection |
-| event-store | Service | n/a | Kafka consumer, persists all events to PostgreSQL with JSONB. Deduplicates by event ID. |
+| event-store | Service | n/a | Kafka consumer, persists all events to PostgreSQL. Deduplicates by event ID. |
 | event-search | Service | 8092 | REST API for querying stored events by type, source, status, time range |
 | event-detect | Service | 8093 | Anomaly detection: statistical baselines, schema drift, embeddings, LLM analysis |
 | event-cli | CLI | n/a | Command-line interface for managing the platform (Picocli) |
@@ -561,9 +561,12 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. CLI with Picocli.
 
 ### Phase 2 (complete)
-Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING). Visual field mapper UI (React, xyflow). Event store (Kafka to PostgreSQL). Event search API (query by type, source, status, time range). 93 tests.
+Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING). Visual field mapper UI (React, xyflow). Event store (Kafka to PostgreSQL). Event search API (query by type, source, status, time range).
 
-### Phase 3 (current: anomaly detection)
+### Phase 3 (complete)
+Anomaly detection module with statistical baselines, schema drift detection, and AI embedding/LLM scaffolds. Alert API with CRUD and resolve. Verified end-to-end: events flow from ingest through Kafka to store, stored in PostgreSQL, queryable via search API, monitored by detect service. 93 tests across 8 Java modules.
+
+### Phase 3 architecture
 
 AI-powered anomaly detection across event streams. Four detection layers, each independent, all feeding into a unified alert system.
 

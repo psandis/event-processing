@@ -9,6 +9,9 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+    table: flyway_schema_history_detect
+    baseline-on-migrate: true
+    baseline-version: 0
 
 server:
   port: 8093
