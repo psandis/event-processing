@@ -161,16 +161,18 @@ event-processing/
 ├── event-ingest/             REST + gRPC event submission (Java, Maven)
 ├── event-engine/             Kafka Streams transform execution (Java, Maven)
 ├── event-admin/              Control center API (Java, Maven)
+├── event-cli/                Command-line interface (Java, Picocli)
 └── event-mapper-ui/          Visual field mapper (React, Vite)
 ```
 
 | Module | Type | Port | Description |
 |--------|------|------|-------------|
 | event-common | Library | n/a | Event model, field mapping model, type converters, serialization |
-| event-ingest | Service | 8090, 9090 | Accepts events via REST and gRPC, validates, publishes to Kafka |
+| event-ingest | Service | 8090, 9190 | Accepts events via REST and gRPC, validates, publishes to Kafka |
 | event-engine | Service | n/a | Consumes from source topics, applies field mappings, produces to destination topics. One instance per pipeline. |
 | event-admin | Service | 8091 | Pipeline CRUD, versioning, deployment status, dead letter inspection |
-| event-mapper-ui | UI | 3000 | Visual field mapper with drag-and-drop, schema discovery, live preview |
+| event-cli | CLI | n/a | Command-line interface for managing the platform (Picocli) |
+| event-mapper-ui | UI | 3070 | Visual field mapper with drag-and-drop, schema discovery, live preview |
 
 ## API
 
@@ -198,6 +200,52 @@ gRPC service `EventService` available on port 9090 with `SubmitEvent` and `Submi
 | GET | `/api/status` | Platform health |
 
 Swagger UI available at `/swagger-ui.html` on both services.
+
+## CLI
+
+Command-line interface for managing the platform. Built with Picocli, packaged as a single executable jar.
+
+```bash
+# Build the CLI
+./mvnw package -pl event-cli -q
+
+# Run it
+java -jar event-cli/target/event-cli-*.jar [command]
+```
+
+### Commands
+
+```bash
+# Platform status
+ep status
+
+# Pipeline management
+ep pipelines list
+ep pipelines get orders-to-warehouse
+ep pipelines create --name my-pipeline --source events.raw --dest output.topic
+ep pipelines deploy orders-to-warehouse --version 1
+ep pipelines pause orders-to-warehouse
+ep pipelines resume orders-to-warehouse
+ep pipelines draft orders-to-warehouse
+ep pipelines delete orders-to-warehouse
+ep pipelines versions orders-to-warehouse
+ep pipelines test orders-to-warehouse '{"orderId":1,"total":"49.99"}'
+
+# Topic operations
+ep topics list
+ep topics schema events.raw
+ep topics sample events.raw --count 5
+
+# Event submission
+ep events send --type order.created --source test --payload '{"orderId":1}'
+ep events send --type order.created --source test --file event.json
+```
+
+### Custom endpoints
+
+```bash
+ep --admin-url http://remote:8091 --ingest-url http://remote:8090 status
+```
 
 ## Pipeline Versioning
 
@@ -263,6 +311,7 @@ React application for building field mappings visually. Connects to the admin AP
 | JSON storage | PostgreSQL JSONB | n/a |
 | Migrations | Flyway | managed |
 | Validation | Jakarta Bean Validation | 3.x |
+| CLI | Picocli | 4.7.6 |
 | API docs | SpringDoc OpenAPI | 2.8.6 |
 | Testing | JUnit 5, MockMvc | 5.12+ |
 | Build | Maven (wrapper included) | 3.9+ |
@@ -407,19 +456,20 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ### Run tests
 
 ```bash
-./start.sh test             # 58 tests across all modules
+./start.sh test             # 77 tests across all modules
 ```
 
 ## Testing
 
-58 tests across all modules. No Kafka or Docker required to run them.
+77 tests across all modules. No Kafka or Docker required to run them.
 
 | Module | Tests | Coverage |
 |--------|-------|----------|
 | event-common | 14 | Type converters (12 conversions), event serialization (2) |
 | event-ingest | 15 | REST endpoints (7), gRPC submit and batch (5), Kafka send behavior (2), Struct conversion (1) |
 | event-engine | 23 | Mapping executor (12 including flatten), schema discovery (4), transform topology with dead letter (3), pipeline loader (4) |
-| event-admin | 6 | Pipeline CRUD, pause/resume, status |
+| event-admin | 10 | Pipeline CRUD with versioning, deploy, pause/resume, mapping test |
+| event-cli | 15 | Command parsing, help output, required options, custom URLs, defaults |
 
 ## Coding Conventions
 
@@ -435,7 +485,7 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ## Roadmap
 
 ### Phase 1 (complete)
-Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. 58 tests.
+Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. CLI with Picocli. 77 tests.
 
 ### Phase 2 (next: visual mapper UI)
 Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING states). Active-passive deployment for live pipeline changes. React-based visual field mapper with schema discovery, drag-and-drop connections, type conversion config, and live preview.
