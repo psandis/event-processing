@@ -64,6 +64,25 @@ Consumer (any language, any system)
 
 On failure:
     [event-engine] --> [events.failed] (dead letter topic)
+
+Event storage (runs in parallel):
+    [all Kafka topics]
+        |
+        | event-store consumes every topic
+        v
+    [event-store]
+        |
+        | deserializes, deduplicates by ID, persists
+        v
+    [PostgreSQL] (stored_events table, JSONB payload)
+        |
+        | event-search reads
+        v
+    [event-search API]
+        |
+        | GET /api/events?type=order.created&source=test&from=...&to=...
+        v
+    Query results (paginated, filterable by type, source, status, time range)
 ```
 
 ## Event Model
@@ -163,6 +182,8 @@ event-processing/
 ├── event-ingest/             REST + gRPC event submission (Java, Maven)
 ├── event-engine/             Kafka Streams transform execution (Java, Maven)
 ├── event-admin/              Control center API (Java, Maven)
+├── event-store/              Event persistence from Kafka to PostgreSQL (Java, Maven)
+├── event-search/             Query API for stored events (Java, Maven)
 ├── event-cli/                Command-line interface (Java, Picocli)
 └── event-mapper-ui/          Visual field mapper (React, Vite)
 ```
@@ -173,6 +194,8 @@ event-processing/
 | event-ingest | Service | 8090, 9190 | Accepts events via REST and gRPC, validates, publishes to Kafka |
 | event-engine | Service | n/a | Consumes from source topics, applies field mappings, produces to destination topics. One instance per pipeline. |
 | event-admin | Service | 8091 | Pipeline CRUD, versioning, deployment status, dead letter inspection |
+| event-store | Service | n/a | Kafka consumer, persists all events to PostgreSQL with JSONB. Deduplicates by event ID. |
+| event-search | Service | 8092 | REST API for querying stored events by type, source, status, time range |
 | event-cli | CLI | n/a | Command-line interface for managing the platform (Picocli) |
 | event-mapper-ui | UI | 3070 | Visual field mapper with drag-and-drop, schema discovery, live preview |
 
@@ -201,7 +224,17 @@ gRPC service `EventService` available on port 9190 with `SubmitEvent` and `Submi
 | POST | `/api/pipelines/{name}/resume` | Resume pipeline |
 | GET | `/api/status` | Platform health |
 
-Swagger UI available at `/swagger-ui.html` on both services.
+Swagger UI available at `/swagger-ui.html` on ingest, admin, and search services.
+
+### Search (port 8092)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/events` | Search events with filters (type, source, status, from, to) |
+| GET | `/api/events/{id}` | Get event by ID |
+| GET | `/api/events/types` | List all event types |
+| GET | `/api/events/sources` | List all event sources |
+| GET | `/api/events/stats` | Event counts by type and source |
 
 ## CLI
 
@@ -339,11 +372,14 @@ React application for building field mappings visually. Connects to the admin AP
 | Service | Port | |
 |---------|------|-|
 | Kafka (KRaft) | 9492 | Event streaming |
-| PostgreSQL | 5877 | Pipeline definitions |
+| PostgreSQL (admin) | 5877 | Pipeline definitions |
+| PostgreSQL (store) | 5878 | Event storage |
 | event-ingest (REST) | 8090 | Event submission |
 | event-ingest (gRPC) | 9190 | Event submission |
 | event-engine | n/a | Transform processing |
 | event-admin | 8091 | Control center |
+| event-store | n/a | Kafka consumer, persists events |
+| event-search | 8092 | Event query API |
 | event-mapper-ui | 3070 | Visual mapper |
 
 ## Quick Start
@@ -478,12 +514,12 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ### Run tests
 
 ```bash
-./start.sh test             # 77 tests across all modules
+./start.sh test             # 87 tests across all modules
 ```
 
 ## Testing
 
-77 tests across all modules. No Kafka or Docker required to run them.
+87 tests across all modules. No Kafka or Docker required to run them.
 
 | Module | Tests | Coverage |
 |--------|-------|----------|
@@ -491,6 +527,8 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 | event-ingest | 15 | REST endpoints (7), gRPC submit and batch (5), Kafka send behavior (2), Struct conversion (1) |
 | event-engine | 23 | Mapping executor (12 including flatten), schema discovery (4), transform topology with dead letter (3), pipeline loader (4) |
 | event-admin | 10 | Pipeline CRUD with versioning, deploy, pause/resume, mapping test |
+| event-store | 3 | Event consumption, deduplication, invalid JSON handling |
+| event-search | 7 | Search with filters, get by ID, types, sources, stats, 404 handling |
 | event-cli | 15 | Command parsing, help output, required options, custom URLs, defaults |
 
 ## Coding Conventions
@@ -507,15 +545,12 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ## Roadmap
 
 ### Phase 1 (complete)
-Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. CLI with Picocli. 77 tests.
+Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. CLI with Picocli.
 
-### Phase 2 (next: visual mapper UI)
-Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING states). Active-passive deployment for live pipeline changes. React-based visual field mapper with schema discovery, drag-and-drop connections, type conversion config, and live preview.
+### Phase 2 (complete)
+Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING). Visual field mapper UI (React, xyflow). Event store (Kafka to PostgreSQL). Event search API (query by type, source, status, time range). 87 tests.
 
-### Phase 3
-Event store (persist processed events to PostgreSQL), search API (query by type, source, time range).
-
-### Phase 4
+### Phase 3 (next)
 Anomaly detection module with Pgvector embeddings and pattern matching.
 
 ## License

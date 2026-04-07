@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: event-search
+  datasource:
+    url: jdbc:postgresql://localhost:5877/eventstore
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: 8092
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
