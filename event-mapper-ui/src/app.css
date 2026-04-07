@@ -5,3 +5,34 @@
     @apply bg-slate-950 text-slate-100 font-sans antialiased;
   }
 }
+
+/* xyflow controls override */
+.react-flow__controls {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.react-flow__controls-button {
+  background: #1e293b !important;
+  border: none !important;
+  border-bottom: 1px solid #334155 !important;
+  fill: #94a3b8 !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #334155 !important;
+  fill: #e2e8f0 !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__controls-button svg {
+  fill: inherit !important;
+}

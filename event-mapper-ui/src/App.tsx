@@ -12,10 +12,16 @@ type View = 'list' | 'editor' | 'new'
 
 export default function App() {
   const [view, setView] = useState<View>('list')
-  const { setPipeline, setSourceFields } = useMapperStore()
+  const { setPipeline, setSourceFields, setDestinationFields } = useMapperStore()
 
   const handleSelectPipeline = async (pipeline: PipelineDefinition) => {
     setPipeline(pipeline)
+
+    // Seed destination fields from existing mappings so positions are stable
+    const destFields = pipeline.fieldMappings
+      .filter((m) => !m.excluded)
+      .map((m) => m.destinationField)
+    setDestinationFields([...new Set(destFields)])
 
     try {
       const schema = await api.discoverSchema(pipeline.sourceTopic)

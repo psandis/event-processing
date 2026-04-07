@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMapperStore } from '../store/mapperStore'
 import { api } from '../api/client'
 import type { PipelineDefinition } from '../types'
@@ -9,11 +9,22 @@ interface Props {
 }
 
 export function PipelineToolbar({ onBack, onSaved }: Props) {
-  const { pipeline, mappings, isDirty } = useMapperStore()
+  const { pipeline, mappings, isDirty, canUndo, undo } = useMapperStore()
   const [saving, setSaving] = useState(false)
   const [deploying, setDeploying] = useState(false)
   const [showDeployConfirm, setShowDeployConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && canUndo) {
+        e.preventDefault()
+        undo()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [canUndo, undo])
 
   if (!pipeline) return null
 
@@ -76,6 +87,15 @@ export function PipelineToolbar({ onBack, onSaved }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 text-sm rounded-lg transition-colors disabled:opacity-30"
+            title="Undo (Ctrl+Z)"
+          >
+            Undo
+          </button>
+
           {isDraft && (
             <>
               <button
