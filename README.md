@@ -176,7 +176,7 @@ event-processing/
 
 ## API
 
-### Ingest (REST port 8090, gRPC port 9090)
+### Ingest (REST port 8090, gRPC port 9190)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -184,7 +184,7 @@ event-processing/
 | POST | `/api/events/batch` | Submit multiple events (max batch size configurable) |
 | GET | `/api/health` | Service health |
 
-gRPC service `EventService` available on port 9090 with `SubmitEvent` and `SubmitBatch` RPCs. Proto definition at `event-ingest/src/main/proto/event_service.proto`.
+gRPC service `EventService` available on port 9190 with `SubmitEvent` and `SubmitBatch` RPCs. Proto definition at `event-ingest/src/main/proto/event_service.proto`.
 
 ### Admin / Control Center (port 8091)
 
