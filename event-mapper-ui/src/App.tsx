@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PipelineList } from './components/PipelineList'
-import { MappingEditor } from './components/MappingEditor'
+import { VisualMapper } from './components/VisualMapper'
 import { PreviewPanel } from './components/PreviewPanel'
 import { PipelineToolbar } from './components/PipelineToolbar'
 import { useMapperStore } from './store/mapperStore'
@@ -21,7 +21,12 @@ export default function App() {
       const schema = await api.discoverSchema(pipeline.sourceTopic)
       setSourceFields(schema)
     } catch {
-      setSourceFields({})
+      // Fallback: derive source fields from existing mappings
+      const fallback: Record<string, { path: string; type: string; occurrences: number }> = {}
+      for (const m of pipeline.fieldMappings) {
+        fallback[m.sourceField] = { path: m.sourceField, type: 'string', occurrences: 1 }
+      }
+      setSourceFields(fallback)
     }
 
     setView('editor')
@@ -55,7 +60,7 @@ export default function App() {
       {view === 'editor' && (
         <>
           <PipelineToolbar onBack={handleBack} onSaved={handleSaved} />
-          <MappingEditor />
+          <VisualMapper />
           <PreviewPanel />
         </>
       )}
