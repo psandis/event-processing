@@ -5,7 +5,7 @@
 
 	<groupId>com.eventprocessing</groupId>
 	<artifactId>event-processing</artifactId>
-	<version>0.0.8-SNAPSHOT</version>
+	<version>0.0.9-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Event Processing</name>
 	<description>Event transformation platform built on Apache Kafka</description>
@@ -17,6 +17,7 @@
 		<module>event-admin</module>
 		<module>event-store</module>
 		<module>event-search</module>
+		<module>event-detect</module>
 		<module>event-cli</module>
 	</modules>
 

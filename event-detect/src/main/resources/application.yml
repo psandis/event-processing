@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: event-detect
+  datasource:
+    url: jdbc:postgresql://localhost:5878/eventstore
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: 8093
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+detect:
+  statistical:
+    window-minutes: 5
+    spike-threshold: 3.0
+    drop-threshold: 0.3
+    minimum-events: 10
+    check-interval-ms: 30000
+  schema:
+    sample-size: 20
+    check-interval-ms: 60000
+  embedding:
+    enabled: false
+    api-url: ${EMBEDDING_API_URL:}
+    api-key: ${EMBEDDING_API_KEY:}
+    model: ${EMBEDDING_MODEL:claude-haiku-4-5-20251001}
+    anomaly-threshold: 0.85
+    check-interval-ms: 300000

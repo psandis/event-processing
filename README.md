@@ -184,6 +184,7 @@ event-processing/
 ├── event-admin/              Control center API (Java, Maven)
 ├── event-store/              Event persistence from Kafka to PostgreSQL (Java, Maven)
 ├── event-search/             Query API for stored events (Java, Maven)
+├── event-detect/             Anomaly detection (Java, Maven)
 ├── event-cli/                Command-line interface (Java, Picocli)
 └── event-mapper-ui/          Visual field mapper (React, Vite)
 ```
@@ -196,6 +197,7 @@ event-processing/
 | event-admin | Service | 8091 | Pipeline CRUD, versioning, deployment status, dead letter inspection |
 | event-store | Service | n/a | Kafka consumer, persists all events to PostgreSQL with JSONB. Deduplicates by event ID. |
 | event-search | Service | 8092 | REST API for querying stored events by type, source, status, time range |
+| event-detect | Service | 8093 | Anomaly detection: statistical baselines, schema drift, embeddings, LLM analysis |
 | event-cli | CLI | n/a | Command-line interface for managing the platform (Picocli) |
 | event-mapper-ui | UI | 3070 | Visual field mapper with drag-and-drop, schema discovery, live preview |
 
@@ -224,7 +226,16 @@ gRPC service `EventService` available on port 9190 with `SubmitEvent` and `Submi
 | POST | `/api/pipelines/{name}/resume` | Resume pipeline |
 | GET | `/api/status` | Platform health |
 
-Swagger UI available at `/swagger-ui.html` on ingest, admin, and search services.
+### Anomaly Detection (port 8093)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/alerts` | List alerts (filter by detectorType, severity, eventType, resolved) |
+| GET | `/api/alerts/{id}` | Get alert details |
+| POST | `/api/alerts/{id}/resolve` | Mark alert as resolved |
+| GET | `/api/alerts/stats` | Alert counts (total, open, resolved) |
+
+Swagger UI available at `/swagger-ui.html` on ingest, admin, search, and detect services.
 
 ### Search (port 8092)
 
@@ -380,6 +391,7 @@ React application for building field mappings visually. Connects to the admin AP
 | event-admin | 8091 | Control center |
 | event-store | n/a | Kafka consumer, persists events |
 | event-search | 8092 | Event query API |
+| event-detect | 8093 | Anomaly detection |
 | event-mapper-ui | 3070 | Visual mapper |
 
 ## Quick Start
@@ -514,12 +526,12 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ### Run tests
 
 ```bash
-./start.sh test             # 87 tests across all modules
+./start.sh test             # 93 tests across all modules
 ```
 
 ## Testing
 
-87 tests across all modules. No Kafka or Docker required to run them.
+93 tests across all modules. No Kafka or Docker required to run them.
 
 | Module | Tests | Coverage |
 |--------|-------|----------|
@@ -529,6 +541,7 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 | event-admin | 10 | Pipeline CRUD with versioning, deploy, pause/resume, mapping test |
 | event-store | 3 | Event consumption, deduplication, invalid JSON handling |
 | event-search | 7 | Search with filters, get by ID, types, sources, stats, 404 handling |
+| event-detect | 6 | Alert CRUD, resolve, schema drift detection logic |
 | event-cli | 15 | Command parsing, help output, required options, custom URLs, defaults |
 
 ## Coding Conventions
@@ -548,9 +561,9 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. CLI with Picocli.
 
 ### Phase 2 (complete)
-Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING). Visual field mapper UI (React, xyflow). Event store (Kafka to PostgreSQL). Event search API (query by type, source, status, time range). 87 tests.
+Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING). Visual field mapper UI (React, xyflow). Event store (Kafka to PostgreSQL). Event search API (query by type, source, status, time range). 93 tests.
 
-### Phase 3 (next: anomaly detection)
+### Phase 3 (current: anomaly detection)
 
 AI-powered anomaly detection across event streams. Four detection layers, each independent, all feeding into a unified alert system.
 
@@ -621,6 +634,65 @@ event-detect/
 | Embeddings | Claude API or OpenAI API |
 | Scheduling | Spring @Scheduled for periodic detection runs |
 | Alerts | Kafka topic (events.anomalies) + REST API |
+
+#### Configuration
+
+Statistical and schema drift detection run automatically with no setup. Embedding and LLM detection require an API key.
+
+```yaml
+# application.yml or environment variables
+detect:
+  statistical:
+    window-minutes: 5          # time window for volume analysis
+    spike-threshold: 3.0       # z-score above this triggers spike alert
+    drop-threshold: 0.3        # volume below this fraction of average triggers drop alert
+    minimum-events: 10         # ignore types with fewer events than this
+    check-interval-ms: 30000   # how often to check (30 seconds)
+  schema:
+    sample-size: 20            # number of recent events to analyze per type
+    check-interval-ms: 60000   # how often to check (60 seconds)
+  embedding:
+    enabled: false             # set to true to enable AI detection
+    api-key: ${EMBEDDING_API_KEY}
+    model: claude-haiku-4-5-20251001
+    anomaly-threshold: 0.85    # cosine distance above this is anomalous
+    check-interval-ms: 300000  # how often to check (5 minutes)
+```
+
+To enable AI-powered detection:
+
+```bash
+# Set environment variables before starting
+export EMBEDDING_API_KEY=your-anthropic-api-key
+export EMBEDDING_API_URL=https://api.anthropic.com
+
+# Or pass via Docker
+docker run -e EMBEDDING_API_KEY=... -e detect.embedding.enabled=true event-detect
+```
+
+#### Alert severity levels
+
+| Severity | Meaning |
+|----------|---------|
+| `HIGH` | Volume spike (z-score above threshold). Immediate attention needed. |
+| `MEDIUM` | Volume drop or schema change. Investigate when possible. |
+| `LOW` | Minor anomaly detected by embedding similarity. Informational. |
+
+#### Using the alerts API
+
+```bash
+# List open alerts
+curl http://localhost:8093/api/alerts?resolved=false
+
+# Get alert details
+curl http://localhost:8093/api/alerts/1
+
+# Resolve an alert
+curl -X POST http://localhost:8093/api/alerts/1/resolve
+
+# Alert stats
+curl http://localhost:8093/api/alerts/stats
+```
 
 ## License
 

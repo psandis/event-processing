@@ -140,6 +140,21 @@ services:
       event-store-db:
         condition: service_healthy
 
+  event-detect:
+    build:
+      context: .
+      args:
+        MODULE: event-detect
+    ports:
+      - "8093:8093"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://event-store-db:5432/eventstore
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      event-store-db:
+        condition: service_healthy
+
   event-mapper-ui:
     build: ./event-mapper-ui
     ports:

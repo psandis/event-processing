@@ -11,7 +11,7 @@
 
 	<groupId>com.eventprocessing</groupId>
 	<artifactId>event-search</artifactId>
-	<version>0.0.8-SNAPSHOT</version>
+	<version>0.0.9-SNAPSHOT</version>
 	<name>Event Search</name>
 	<description>Query API for searching stored events</description>
 
