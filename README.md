@@ -550,8 +550,77 @@ Event ingestion (REST + gRPC), pipeline definition storage, transform engine wit
 ### Phase 2 (complete)
 Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING). Visual field mapper UI (React, xyflow). Event store (Kafka to PostgreSQL). Event search API (query by type, source, status, time range). 87 tests.
 
-### Phase 3 (next)
-Anomaly detection module with Pgvector embeddings and pattern matching.
+### Phase 3 (next: anomaly detection)
+
+AI-powered anomaly detection across event streams. Four detection layers, each independent, all feeding into a unified alert system.
+
+#### Detection Layers
+
+**1. Statistical baselines**
+Track event volume per type and source over sliding time windows. Detect spikes, drops, and unusual patterns in throughput. No AI needed, pure math. Configurable thresholds and sensitivity.
+
+Example: "order.created events from payment-service dropped 90% in the last 5 minutes"
+
+**2. Schema drift detection**
+Compare incoming event structures against discovered schemas. Detect when fields appear, disappear, or change type. Uses the existing SchemaDiscovery engine.
+
+Example: "order.created events from checkout-v2 now include a 'discount' field that was never seen before"
+
+**3. Content anomaly detection (vector embeddings)**
+Generate vector embeddings of event payloads using an LLM API (Claude or OpenAI). Store embeddings in PostgreSQL with Pgvector. Compute cosine distance from the cluster center for each event type. Events far from the center are flagged as anomalous.
+
+Architecture:
+```
+event-store (PostgreSQL)
+    |
+    | event-detect reads stored events
+    v
+[event-detect]
+    |
+    | 1. batch events by type
+    | 2. generate embeddings via LLM API
+    | 3. store vectors in Pgvector
+    | 4. compute distance from centroid
+    | 5. flag outliers above threshold
+    |
+    v
+[anomaly alerts] --> admin API --> mapper UI notifications
+```
+
+Example: "This order.created event has unusual field values. The 'total' of 999999.99 is 47x higher than the average for this event type."
+
+**4. LLM analysis**
+For flagged anomalies, send the event payload and historical context to an LLM for natural language analysis. Get a human-readable explanation of what's unusual and potential root causes.
+
+Example: "This event contains a negative stock quantity (-5) which has never occurred before. This may indicate a race condition in the inventory service."
+
+#### Module structure
+
+```
+event-detect/
+├── detector/
+│   ├── StatisticalDetector.java      Volume baselines, spike/drop detection
+│   ├── SchemaDriftDetector.java      Field presence and type changes
+│   ├── EmbeddingDetector.java        Vector similarity with Pgvector
+│   └── LlmAnalyzer.java             Natural language anomaly explanation
+├── embedding/
+│   ├── EmbeddingService.java         LLM API client for generating vectors
+│   └── VectorStore.java             Pgvector read/write operations
+├── alert/
+│   ├── AnomalyAlert.java            Alert model
+│   └── AlertService.java            Stores and publishes alerts
+└── config/
+    └── DetectProperties.java         Thresholds, API keys, intervals
+```
+
+#### Tech additions
+
+| Component | Technology |
+|-----------|-----------|
+| Vector storage | Pgvector (PostgreSQL extension) |
+| Embeddings | Claude API or OpenAI API |
+| Scheduling | Spring @Scheduled for periodic detection runs |
+| Alerts | Kafka topic (events.anomalies) + REST API |
 
 ## License
 
