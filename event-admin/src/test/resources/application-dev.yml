@@ -14,7 +14,7 @@ spring:
   flyway:
     enabled: false
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: localhost:9492
 
 server:
   port: 8091

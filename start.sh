@@ -24,7 +24,7 @@ usage() {
     echo "  engines            List running engine instances"
     echo ""
     echo "Ports:"
-    echo "  Kafka: 9092   Ingest: 8090   Admin: 8091   DB: 5877"
+    echo "  Kafka: 9492   Ingest: 8090/9190   Admin: 8091   DB: 5877   UI: 3070"
     echo ""
     echo "Examples:"
     echo "  ./start.sh docker                        # start infrastructure"

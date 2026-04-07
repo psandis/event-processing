@@ -1,7 +1,7 @@
 package com.eventprocessing.engine;
 
-import com.eventprocessing.engine.discovery.SchemaDiscovery;
-import com.eventprocessing.engine.discovery.SchemaDiscovery.FieldInfo;
+import com.eventprocessing.common.discovery.SchemaDiscovery;
+import com.eventprocessing.common.discovery.SchemaDiscovery.FieldInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

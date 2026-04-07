@@ -3,12 +3,12 @@ services:
     image: confluentinc/cp-kafka:7.7.1
     hostname: kafka
     ports:
-      - "9092:9092"
+      - "9492:9492"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,EXTERNAL://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,EXTERNAL://0.0.0.0:9492
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9492
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -48,7 +48,7 @@ services:
         MODULE: event-ingest
     ports:
       - "8090:8090"
-      - "9090:9090"
+      - "9190:9090"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
@@ -92,6 +92,13 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+
+  event-mapper-ui:
+    build: ./event-mapper-ui
+    ports:
+      - "3070:3070"
+    depends_on:
+      - event-admin
 
 volumes:
   pgdata:

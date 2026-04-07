@@ -23,7 +23,8 @@ public class PipelineDefinition {
     @NotBlank
     private String destinationTopic;
 
-    private boolean enabled = true;
+    private int version = 1;
+    private PipelineState state = PipelineState.DRAFT;
 
     @NotNull
     private List<FieldMapping> fieldMappings = new ArrayList<>();
@@ -44,8 +45,11 @@ public class PipelineDefinition {
     public String getDestinationTopic() { return destinationTopic; }
     public void setDestinationTopic(String destinationTopic) { this.destinationTopic = destinationTopic; }
 
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public int getVersion() { return version; }
+    public void setVersion(int version) { this.version = version; }
+
+    public PipelineState getState() { return state; }
+    public void setState(PipelineState state) { this.state = state; }
 
     public List<FieldMapping> getFieldMappings() { return fieldMappings; }
     public void setFieldMappings(List<FieldMapping> fieldMappings) { this.fieldMappings = fieldMappings; }

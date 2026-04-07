@@ -11,7 +11,7 @@
 
 	<groupId>com.eventprocessing</groupId>
 	<artifactId>event-admin</artifactId>
-	<version>0.0.3-SNAPSHOT</version>
+	<version>0.0.4-SNAPSHOT</version>
 	<name>Event Admin</name>
 	<description>Control center for pipeline management, health monitoring, and metrics</description>
 

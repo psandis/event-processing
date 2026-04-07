@@ -34,7 +34,10 @@ public class PipelineEntity {
     private String destinationTopic;
 
     @Column(nullable = false)
-    private boolean enabled = true;
+    private int version = 1;
+
+    @Column(nullable = false, length = 20)
+    private String state = "DRAFT";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "field_mappings", nullable = false, columnDefinition = "jsonb")
@@ -68,8 +71,11 @@ public class PipelineEntity {
     public String getDestinationTopic() { return destinationTopic; }
     public void setDestinationTopic(String destinationTopic) { this.destinationTopic = destinationTopic; }
 
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public int getVersion() { return version; }
+    public void setVersion(int version) { this.version = version; }
+
+    public String getState() { return state; }
+    public void setState(String state) { this.state = state; }
 
     public String getFieldMappings() { return fieldMappings; }
     public void setFieldMappings(String fieldMappings) { this.fieldMappings = fieldMappings; }

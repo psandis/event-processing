@@ -1,6 +1,7 @@
 package com.eventprocessing.engine.config;
 
 import com.eventprocessing.common.mapping.PipelineDefinition;
+import com.eventprocessing.common.mapping.PipelineState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,15 +43,17 @@ public class PipelineLoader {
             throw new IllegalStateException("Pipeline not found: " + name);
         }
 
-        if (!pipeline.isEnabled()) {
-            throw new IllegalStateException("Pipeline is disabled: " + name);
+        if (pipeline.getState() != PipelineState.ACTIVE && pipeline.getState() != PipelineState.DRAFT) {
+            throw new IllegalStateException("Pipeline is not active or draft: " + name + " (state: " + pipeline.getState() + ")");
         }
 
-        log.info("Pipeline loaded: {} ({} -> {}, {} field mappings)",
+        log.info("Pipeline loaded: {} v{} ({} -> {}, {} field mappings, state: {})",
                 pipeline.getName(),
+                pipeline.getVersion(),
                 pipeline.getSourceTopic(),
                 pipeline.getDestinationTopic(),
-                pipeline.getFieldMappings().size());
+                pipeline.getFieldMappings().size(),
+                pipeline.getState());
 
         return pipeline;
     }

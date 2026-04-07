@@ -156,29 +156,33 @@ event-processing/
 ├── pom.xml                   Maven aggregator
 ├── docker-compose.yml        Kafka (KRaft), PostgreSQL, all services
 ├── start.sh                  Build, start, stop, test
-├── Dockerfile                Multi-stage build (shared across services)
-├── event-common/             Shared library (not a service)
-├── event-ingest/             REST API for event submission
-├── event-engine/             Kafka consumer/producer, transform execution
-└── event-admin/              Control center API for pipeline management
+├── Dockerfile                Multi-stage build (shared across Java services)
+├── event-common/             Shared library (Java, Maven)
+├── event-ingest/             REST + gRPC event submission (Java, Maven)
+├── event-engine/             Kafka Streams transform execution (Java, Maven)
+├── event-admin/              Control center API (Java, Maven)
+└── event-mapper-ui/          Visual field mapper (React, Vite)
 ```
 
 | Module | Type | Port | Description |
 |--------|------|------|-------------|
 | event-common | Library | n/a | Event model, field mapping model, type converters, serialization |
-| event-ingest | Service | 8090 | Accepts events via REST, validates, publishes to `events.raw` |
-| event-engine | Service | n/a | Consumes from source topics, applies field mappings, produces to destination topics |
-| event-admin | Service | 8091 | Pipeline CRUD, dead letter inspection, service health |
+| event-ingest | Service | 8090, 9090 | Accepts events via REST and gRPC, validates, publishes to Kafka |
+| event-engine | Service | n/a | Consumes from source topics, applies field mappings, produces to destination topics. One instance per pipeline. |
+| event-admin | Service | 8091 | Pipeline CRUD, versioning, deployment status, dead letter inspection |
+| event-mapper-ui | UI | 3000 | Visual field mapper with drag-and-drop, schema discovery, live preview |
 
 ## API
 
-### Ingest (port 8090)
+### Ingest (REST port 8090, gRPC port 9090)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/events` | Submit a single event |
-| POST | `/api/events/batch` | Submit multiple events |
+| POST | `/api/events/batch` | Submit multiple events (max batch size configurable) |
 | GET | `/api/health` | Service health |
+
+gRPC service `EventService` available on port 9090 with `SubmitEvent` and `SubmitBatch` RPCs. Proto definition at `event-ingest/src/main/proto/event_service.proto`.
 
 ### Admin / Control Center (port 8091)
 
@@ -195,7 +199,57 @@ event-processing/
 
 Swagger UI available at `/swagger-ui.html` on both services.
 
+## Pipeline Versioning
+
+Each pipeline supports multiple versions. Only one version can be active at a time.
+
+| State | Meaning |
+|-------|---------|
+| `DRAFT` | Being designed in the mapper UI. Not deployed, no engine running. |
+| `ACTIVE` | Deployed. Engine instance running, processing events. |
+| `PAUSED` | Engine stopped. Can be resumed with the same configuration. |
+| `DEPLOYING` | New version being rolled out via active-passive switch. |
+
+Creating or editing a pipeline in the mapper UI creates a DRAFT version. Deploying promotes it to ACTIVE.
+
+## Active-Passive Deployment
+
+Changing a live pipeline uses an active-passive pattern to avoid downtime or event loss.
+
+1. User opens an ACTIVE pipeline in the mapper UI
+2. UI warns: "This pipeline is currently processing events. Changes will be deployed as a new version."
+3. User edits field mappings, tests with sample data (working on a DRAFT version)
+4. User clicks Deploy
+5. System starts a new engine instance (passive) with the updated mappings
+6. Passive engine catches up (consumer lag reaches zero)
+7. Traffic switches to the new engine
+8. Old engine stops
+9. Old version is archived, new version becomes ACTIVE
+
+Rollback: start the old version's engine instance. The archived config is preserved.
+
+Docker handles the engine lifecycle. Each engine instance is a container running one pipeline version.
+
+## Visual Mapper UI
+
+React application for building field mappings visually. Connects to the admin API.
+
+**Stack:** React 19, Vite, @xyflow/react v12, Zustand, Tailwind CSS v4
+
+**Features:**
+- Connect a source Kafka topic. Schema is discovered automatically from sample events.
+- Source fields displayed on the left, destination fields on the right.
+- Draw connections between fields by dragging.
+- Configure type conversion on each connection (click the line).
+- Set defaults, formatting, exclusions per field.
+- Live preview: real sample events flow through the mappings, output shown side by side.
+- Test runner: validate mappings before deploying.
+- Pipeline state indicator (DRAFT, ACTIVE, PAUSED, DEPLOYING).
+- Warning when editing an active pipeline.
+
 ## Tech Stack
+
+### Backend
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
@@ -203,25 +257,43 @@ Swagger UI available at `/swagger-ui.html` on both services.
 | Framework | Spring Boot | 3.5.0 |
 | Messaging | Spring Kafka | managed |
 | Streaming | Apache Kafka (Confluent, KRaft mode) | 7.7.1 |
+| RPC | gRPC, Protobuf | 1.62.2 |
 | Persistence | Spring Data JPA / Hibernate | 6.x |
 | Database | PostgreSQL | 17 |
 | JSON storage | PostgreSQL JSONB | n/a |
 | Migrations | Flyway | managed |
 | Validation | Jakarta Bean Validation | 3.x |
 | API docs | SpringDoc OpenAPI | 2.8.6 |
-| Testing | JUnit 5, MockMvc, EmbeddedKafka | 5.12+ |
-| Containers | Docker, Docker Compose | 24.0+ |
+| Testing | JUnit 5, MockMvc | 5.12+ |
 | Build | Maven (wrapper included) | 3.9+ |
+
+### Frontend (mapper UI)
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Framework | React | 19 |
+| Build tool | Vite | latest |
+| Visual editor | @xyflow/react | 12 |
+| State management | Zustand | latest |
+| Styling | Tailwind CSS | 4 |
+
+### Infrastructure
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Containers | Docker, Docker Compose | 24.0+ |
 
 ## Services
 
 | Service | Port | |
 |---------|------|-|
-| Kafka (KRaft) | 9092 | Event streaming |
+| Kafka (KRaft) | 9492 | Event streaming |
 | PostgreSQL | 5877 | Pipeline definitions |
-| event-ingest | 8090 | Event submission |
+| event-ingest (REST) | 8090 | Event submission |
+| event-ingest (gRPC) | 9190 | Event submission |
 | event-engine | n/a | Transform processing |
 | event-admin | 8091 | Control center |
+| event-mapper-ui | 3070 | Visual mapper |
 
 ## Quick Start
 
@@ -335,18 +407,18 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 ### Run tests
 
 ```bash
-./start.sh test             # 39 tests across all modules
+./start.sh test             # 58 tests across all modules
 ```
 
 ## Testing
 
-39 tests across all modules. No Kafka or Docker required to run them.
+58 tests across all modules. No Kafka or Docker required to run them.
 
 | Module | Tests | Coverage |
 |--------|-------|----------|
 | event-common | 14 | Type converters (12 conversions), event serialization (2) |
-| event-ingest | 5 | REST endpoints, validation, batch submission |
-| event-engine | 14 | Mapping executor (10 transform scenarios), schema discovery (4) |
+| event-ingest | 15 | REST endpoints (7), gRPC submit and batch (5), Kafka send behavior (2), Struct conversion (1) |
+| event-engine | 23 | Mapping executor (12 including flatten), schema discovery (4), transform topology with dead letter (3), pipeline loader (4) |
 | event-admin | 6 | Pipeline CRUD, pause/resume, status |
 
 ## Coding Conventions
@@ -362,17 +434,17 @@ curl -X DELETE http://localhost:8091/api/pipelines/orders-to-warehouse
 
 ## Roadmap
 
-### Phase 1 (current)
-Event ingestion, pipeline definition storage, transform engine core.
+### Phase 1 (complete)
+Event ingestion (REST + gRPC), pipeline definition storage, transform engine with Kafka Streams, dead letter handling. 58 tests.
 
-### Phase 2
-Event store (persist processed events to PostgreSQL), search API (query by type, source, time range).
+### Phase 2 (next: visual mapper UI)
+Pipeline versioning (DRAFT/ACTIVE/PAUSED/DEPLOYING states). Active-passive deployment for live pipeline changes. React-based visual field mapper with schema discovery, drag-and-drop connections, type conversion config, and live preview.
 
 ### Phase 3
-Anomaly detection module with Pgvector embeddings and pattern matching.
+Event store (persist processed events to PostgreSQL), search API (query by type, source, time range).
 
 ### Phase 4
-Visual mapper UI. Schema discovery visualization, drag-and-drop field mapping, live preview with real event data.
+Anomaly detection module with Pgvector embeddings and pattern matching.
 
 ## License
 

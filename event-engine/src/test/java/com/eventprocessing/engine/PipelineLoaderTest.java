@@ -2,6 +2,7 @@ package com.eventprocessing.engine.config;
 
 import com.eventprocessing.common.mapping.FieldMapping;
 import com.eventprocessing.common.mapping.PipelineDefinition;
+import com.eventprocessing.common.mapping.PipelineState;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +44,7 @@ class PipelineLoaderTest {
         pipeline.setName("test-pipeline");
         pipeline.setSourceTopic("events.raw");
         pipeline.setDestinationTopic("events.processed");
-        pipeline.setEnabled(true);
+        pipeline.setState(PipelineState.ACTIVE);
         pipeline.setFieldMappings(List.of(new FieldMapping("a", "b")));
 
         mockServer.expect(requestTo("http://admin.test/api/pipelines/test-pipeline"))
@@ -81,23 +82,23 @@ class PipelineLoaderTest {
     }
 
     @Test
-    void throwsWhenPipelineDisabled() throws Exception {
+    void throwsWhenPipelinePaused() throws Exception {
         PipelineDefinition pipeline = new PipelineDefinition();
-        pipeline.setName("disabled-pipeline");
+        pipeline.setName("paused-pipeline");
         pipeline.setSourceTopic("events.raw");
         pipeline.setDestinationTopic("events.processed");
-        pipeline.setEnabled(false);
+        pipeline.setState(PipelineState.PAUSED);
         pipeline.setFieldMappings(List.of());
 
-        mockServer.expect(requestTo("http://admin.test/api/pipelines/disabled-pipeline"))
+        mockServer.expect(requestTo("http://admin.test/api/pipelines/paused-pipeline"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(objectMapper.writeValueAsString(pipeline), MediaType.APPLICATION_JSON));
 
-        EngineProperties props = new EngineProperties("disabled-pipeline", "http://admin.test");
+        EngineProperties props = new EngineProperties("paused-pipeline", "http://admin.test");
         PipelineLoader loader = new PipelineLoader(props, restClient);
 
         assertThatThrownBy(loader::load)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("disabled");
+                .hasMessageContaining("not active or draft");
     }
 }
