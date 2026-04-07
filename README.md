@@ -1,6 +1,8 @@
 # Event Processing
 
-Declarative event transformation and routing platform built on Apache Kafka. Define field-level mappings between source and destination topics. The platform reads events, applies transforms, and writes results. No custom consumer code needed.
+Declarative event transformation and routing platform built on Apache Kafka. Define field-level mappings between source and destination topics through a visual mapper UI, CLI, or REST API. The platform reads events, applies transforms, and writes results. No custom consumer code needed.
+
+Includes a React-based visual field mapper with drag-and-drop connections, a Picocli command-line interface, REST and gRPC ingestion, pipeline versioning with active-passive deployment, and Kafka Streams processing with dead letter handling.
 
 ## Design Principles
 
@@ -350,11 +352,21 @@ React application for building field mappings visually. Connects to the admin AP
 git clone https://github.com/psandis/event-processing.git
 cd event-processing
 docker compose up --build -d    # starts Kafka, PostgreSQL, ingest, admin
+./mvnw package -pl event-cli -q # build the CLI
 ```
 
 ### 1. Create a pipeline
 
-Define how events should be transformed from source to destination.
+Using the CLI:
+
+```bash
+java -jar event-cli/target/event-cli-*.jar pipelines create \
+  --name orders-to-warehouse \
+  --source events.raw \
+  --dest warehouse.fulfillment
+```
+
+Or using curl:
 
 ```bash
 curl -X POST http://localhost:8091/api/pipelines \
@@ -386,6 +398,16 @@ PIPELINE_NAME=orders-to-warehouse docker compose run -d event-engine
 The engine fetches the pipeline definition from admin, builds a Kafka Streams topology, and starts consuming from the source topic.
 
 ### 3. Submit an event
+
+Using the CLI:
+
+```bash
+java -jar event-cli/target/event-cli-*.jar events send \
+  --type order.created --source order-service \
+  --payload '{"orderId":5001,"total":"129.99","currency":"EUR","customer":{"city":"Helsinki","country":"fi"}}'
+```
+
+Or using curl:
 
 ```bash
 curl -X POST http://localhost:8090/api/events \
