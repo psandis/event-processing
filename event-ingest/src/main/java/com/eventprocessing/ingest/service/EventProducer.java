@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 @Service
-public class EventProducer {
+public class EventProducer implements EventSubmitter {
 
     private static final Logger log = LoggerFactory.getLogger(EventProducer.class);
 
@@ -27,6 +27,7 @@ public class EventProducer {
         this.ingestProperties = ingestProperties;
     }
 
+    @Override
     public Event submit(EventRequest request) {
         Event event = new Event(request.type(), request.source(), request.payload());
         if (request.metadata() != null) {

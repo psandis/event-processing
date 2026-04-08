@@ -2,7 +2,7 @@ package com.eventprocessing.ingest.controller;
 
 import com.eventprocessing.common.model.Event;
 import com.eventprocessing.common.model.EventRequest;
-import com.eventprocessing.ingest.service.EventProducer;
+import com.eventprocessing.ingest.service.EventSubmitter;
 import com.eventprocessing.ingest.service.IngestRequestValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,10 +23,10 @@ import java.util.Map;
 @Tag(name = "Events", description = "Event ingestion endpoints")
 public class EventController {
 
-    private final EventProducer eventProducer;
+    private final EventSubmitter eventProducer;
     private final IngestRequestValidator requestValidator;
 
-    public EventController(EventProducer eventProducer, IngestRequestValidator requestValidator) {
+    public EventController(EventSubmitter eventProducer, IngestRequestValidator requestValidator) {
         this.eventProducer = eventProducer;
         this.requestValidator = requestValidator;
     }

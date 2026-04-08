@@ -3,8 +3,8 @@ package com.eventprocessing.ingest.grpc;
 import com.eventprocessing.common.model.Event;
 import com.eventprocessing.common.model.EventRequest;
 import com.eventprocessing.ingest.service.BatchSizeExceededException;
-import com.eventprocessing.ingest.service.EventProducer;
 import com.eventprocessing.ingest.service.EventSubmissionException;
+import com.eventprocessing.ingest.service.EventSubmitter;
 import com.eventprocessing.ingest.service.IngestRequestValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,12 +25,12 @@ public class GrpcEventService extends EventServiceGrpc.EventServiceImplBase {
 
     private static final Logger log = LoggerFactory.getLogger(GrpcEventService.class);
 
-    private final EventProducer eventProducer;
+    private final EventSubmitter eventProducer;
     private final IngestRequestValidator requestValidator;
     private final ObjectMapper objectMapper;
 
     public GrpcEventService(
-            EventProducer eventProducer,
+            EventSubmitter eventProducer,
             IngestRequestValidator requestValidator,
             ObjectMapper objectMapper
     ) {

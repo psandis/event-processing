@@ -5,7 +5,7 @@
 
 	<groupId>com.eventprocessing</groupId>
 	<artifactId>event-processing</artifactId>
-	<version>0.0.9-SNAPSHOT</version>
+	<version>0.1.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Event Processing</name>
 	<description>Event transformation platform built on Apache Kafka</description>

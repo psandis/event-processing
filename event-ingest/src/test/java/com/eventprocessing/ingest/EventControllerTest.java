@@ -4,21 +4,15 @@ import com.eventprocessing.common.model.Event;
 import com.eventprocessing.common.model.EventRequest;
 import com.eventprocessing.ingest.controller.EventController;
 import com.eventprocessing.ingest.controller.GlobalExceptionHandler;
-import com.eventprocessing.ingest.service.EventProducer;
+import com.eventprocessing.ingest.service.EventSubmitter;
 import com.eventprocessing.ingest.service.IngestRequestValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -152,27 +146,11 @@ class EventControllerTest {
                 .andExpect(jsonPath("$.title").value("Malformed Request"));
     }
 
-    static final class StubEventProducer extends EventProducer {
-
-        private StubEventProducer() {
-            super(new NoOpKafkaTemplate(), new com.eventprocessing.ingest.config.IngestProperties());
-        }
+    static final class StubEventProducer implements EventSubmitter {
 
         @Override
         public Event submit(EventRequest request) {
             return new Event(request.type(), request.source(), request.payload());
-        }
-    }
-
-    static final class NoOpKafkaTemplate extends KafkaTemplate<String, String> {
-
-        private NoOpKafkaTemplate() {
-            super(new DefaultKafkaProducerFactory<>(Map.of()));
-        }
-
-        @Override
-        public CompletableFuture<SendResult<String, String>> send(String topic, String key, String data) {
-            throw new UnsupportedOperationException("NoOpKafkaTemplate should not be used in controller tests");
         }
     }
 }

@@ -12,7 +12,7 @@ import picocli.CommandLine.Option;
         name = "ep",
         description = "Event Processing Platform CLI",
         mixinStandardHelpOptions = true,
-        version = "0.0.9",
+        version = "0.1.0",
         subcommands = {
                 PipelinesCommand.class,
                 TopicsCommand.class,

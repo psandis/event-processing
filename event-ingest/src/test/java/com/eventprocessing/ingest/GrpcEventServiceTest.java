@@ -6,8 +6,8 @@ import com.eventprocessing.ingest.grpc.BatchEventRequest;
 import com.eventprocessing.ingest.grpc.BatchEventResponse;
 import com.eventprocessing.ingest.grpc.EventResponse;
 import com.eventprocessing.ingest.grpc.GrpcEventService;
-import com.eventprocessing.ingest.service.EventProducer;
 import com.eventprocessing.ingest.service.EventSubmissionException;
+import com.eventprocessing.ingest.service.EventSubmitter;
 import com.eventprocessing.ingest.service.IngestRequestValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,14 +19,9 @@ import io.grpc.stub.StreamObserver;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -209,14 +204,10 @@ class GrpcEventServiceTest {
         return properties;
     }
 
-    private static final class CapturingEventProducer extends EventProducer {
+    private static final class CapturingEventProducer implements EventSubmitter {
 
         private final List<EventRequest> submittedRequests = new ArrayList<>();
         private RuntimeException submitException;
-
-        private CapturingEventProducer() {
-            super(new NoOpKafkaTemplate(), new com.eventprocessing.ingest.config.IngestProperties());
-        }
 
         @Override
         public Event submit(EventRequest request) {
@@ -234,18 +225,6 @@ class GrpcEventServiceTest {
 
         private void throwOnSubmit(RuntimeException exception) {
             this.submitException = exception;
-        }
-    }
-
-    private static final class NoOpKafkaTemplate extends KafkaTemplate<String, String> {
-
-        private NoOpKafkaTemplate() {
-            super(new DefaultKafkaProducerFactory<>(Map.of()));
-        }
-
-        @Override
-        public CompletableFuture<SendResult<String, String>> send(String topic, String key, String data) {
-            throw new UnsupportedOperationException("NoOpKafkaTemplate should not be used in gRPC tests");
         }
     }
 }
