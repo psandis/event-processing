@@ -11,7 +11,7 @@
 
 	<groupId>com.eventprocessing</groupId>
 	<artifactId>event-store</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.1.1-SNAPSHOT</version>
 	<name>Event Store</name>
 	<description>Consumes processed events from Kafka and persists to PostgreSQL</description>
 

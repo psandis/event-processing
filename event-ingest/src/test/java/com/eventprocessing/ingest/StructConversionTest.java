@@ -24,9 +24,6 @@ class StructConversionTest {
         String json = JsonFormat.printer().print(struct);
         JsonNode node = mapper.readTree(json);
 
-        System.out.println("JSON output: " + json);
-        System.out.println("Node: " + node);
-
         assertThat(node.get("orderId").numberValue()).isEqualTo(42.0);
         assertThat(node.get("total").textValue()).isEqualTo("99.99");
         assertThat(node.get("active").booleanValue()).isTrue();
